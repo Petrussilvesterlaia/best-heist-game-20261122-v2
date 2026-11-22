@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Velvet Vault — a heist in three rooms</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #07090f; min-height: 100%; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui, sans-serif; }
+  #wrap { padding: 18px; }
+  canvas { display: block; width: min(96vw, 1000px); height: auto; border: 1px solid #2b3348; border-radius: 10px; box-shadow: 0 24px 70px rgba(0,0,0,.65); background: #0b0e17; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="1000" height="712"></canvas>
+  <p id="status" role="status"></p>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
