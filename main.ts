@@ -1,42 +1,74 @@
-// Velvet Vault — the hand-in program (Node 22, standard library only).
+// main.ts — Velvet Vault's hand-in program for make.fun.
 //
-// The game is this directory's game/ folder, plain static files a desktop
-// browser loads offline (game/index.html and its ES modules, no library and
-// no network request), and this program hands it in: it copies game/ and
-// screenshots/ from beside this file to /output and writes
-// /output/dossier.json, the summary the judge reads, with the vendored
-// make.fun library. buildDossier returns the dossier bytes; this file writes
-// them out.
+// It copies game/ and screenshots/ from this repository into the output
+// directory (MAKEFUN_OUTPUT_DIR outside the grader, /output inside it)
+// and writes dossier.json there with the kit's vendored buildDossier, so
+// the dossier the gate rebuilds is byte for byte the one submitted.
 //
-// Serve it locally with `node serve.ts`, then open http://localhost:8080.
-// Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+// The screenshots are the entry's cover and proof, so the program refuses
+// to hand in a night it cannot show: fewer than 3 or more than 4 images
+// in screenshots/ is a hard stop, not a warning.
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { cpSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
 
-const here = fileURLToPath(new URL('.', import.meta.url));
-const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const repoRoot = dirname(fileURLToPath(import.meta.url));
+const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
-mkdirSync(out, { recursive: true });
-cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
-mkdirSync(join(out, 'screenshots'), { recursive: true });
-if (existsSync(join(here, 'screenshots'))) {
-  cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
+// The caps this bounty grades under (see the kit's RULES.txt, "The gate").
+const CAPS = {
+  text_max_bytes: 163_840,
+  screenshots: { max: 4, max_bytes: 256 * 1024 },
+  game_max_files: 993,
+  game_max_bytes: 48 * 1024 * 1024,
+  game_path_max_bytes: 1000,
+};
+
+function fail(message: string): never {
+  console.error(`main.ts: ${message}`);
+  process.exit(1);
 }
 
-// The scorer's own caps: only text_max_bytes shapes the bytes; the others
-// refuse an entry the scorer would refuse (more than 4 screenshots or one
-// over 256 KiB; more than 993 files in game/ or 48 MiB of game files, in
-// all, or a path under game/ over 1000 bytes).
-const dossier = buildDossier(out, {
-  text_max_bytes: 163840,
-  screenshots: { max: 4, max_bytes: 262144 },
-  game_max_files: 993,
-  game_max_bytes: 50331648,
-  game_path_max_bytes: 1000,
-});
-writeFileSync(join(out, 'dossier.json'), dossier);
-console.log(`wrote ${out}/dossier.json (${dossier.length} bytes) from game/ and screenshots/`);
+function screenshotNames(): string[] {
+  const dir = join(repoRoot, 'screenshots');
+  if (!existsSync(dir)) fail('screenshots/ is missing — an entry hands in 3 or 4 renders of its game');
+  return readdirSync(dir)
+    .filter((name) => /\.(png|jpe?g)$/i.test(name) && !name.startsWith('.'))
+    .sort();
+}
+
+function main(): void {
+  const shots = screenshotNames();
+  if (shots.length < 3 || shots.length > CAPS.screenshots.max) {
+    fail(`screenshots/ holds ${shots.length} image(s); the hand-in needs 3 or 4 — stopping at the dossier gate`);
+  }
+
+  cpSync(join(repoRoot, 'game'), join(outDir, 'game'), { recursive: true });
+  cpSync(join(repoRoot, 'screenshots'), join(outDir, 'screenshots'), { recursive: true });
+
+  const dossier = buildDossier(outDir, CAPS);
+  writeFileSync(join(outDir, 'dossier.json'), dossier);
+  verifyHandIn(outDir, dossier);
+
+  console.log(`main.ts: handed in game/ + ${shots.length} screenshots (${shots.join(', ')})`);
+  console.log(`main.ts: dossier.json written, ${dossier.byteLength} bytes`);
+}
+
+// The grader runs this program twice and demands the same bytes both
+// times, so prove it before leaving: rebuild the dossier from the output
+// directory as it now stands and compare it with the file just written,
+// byte for byte. A mismatch means the copy step is not deterministic.
+function verifyHandIn(outDir: string, written: Uint8Array): void {
+  const rebuilt = buildDossier(outDir, CAPS);
+  const onDisk = readFileSync(join(outDir, 'dossier.json'));
+  if (rebuilt.byteLength !== written.byteLength || !rebuilt.every((b, i) => b === written[i])) {
+    fail('verification failed: a second buildDossier over the output differs from the first');
+  }
+  if (!onDisk.equals(Buffer.from(written))) {
+    fail('verification failed: dossier.json on disk differs from the bytes built in memory');
+  }
+}
+
+main();

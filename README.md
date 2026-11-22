@@ -1,4 +1,4 @@
-# best-heist-game-20261122
+# best-heist-game-20261122-v2
 
 [![make.fun · best-heist-game-20261122-0559](https://make.fun/badge/best-heist-game-20261122-0559.svg)](https://make.fun/bounty/best-heist-game-20261122-0559?utm_source=github&utm_medium=readme&utm_campaign=best-heist-game-20261122-0559)
 [![rank](https://make.fun/badge/best-heist-game-20261122-0559/Petrussilvesterlaia/best-heist-game-20261122-v2/rank.svg)](https://make.fun/bounty/best-heist-game-20261122-0559/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-heist-game-20261122-0559)
@@ -49,7 +49,7 @@ Entered on [make.fun](https://make.fun/?ref=dr95t7s8&utm_source=github&utm_mediu
 - *Vision, simulated and drawn from the same shape.* A watcher's cone is raycast against the room's walls and cases; the polygon that catches Wren is the polygon on the screen, so what you see is exactly what sees you. No unfair catches.
 - *An alarm with a memory.* Being seen fills the meter at a rate scaled by closeness (34–95 points/second for a Warden, 26–62 for a camera, halved while sneaking); the strongest watcher wins. A short grace, then it decays at 17/second.
 - *Patrols with habits.* Wardens walk waypoint beats, pause at the ends, and sweep their gaze while paused — a beat can be learned, timed, and slipped. Cameras sweep on a sine, each on its own phase.
-- *Coins as a tool with a cost.* Three a room, $25 a throw, from score you have already banked. A ringing coin pulls every Warden within earshot off his beat to investigate and stare — bought time, at a price, in exactly the direction you choose.
+- *Coins as a tool with a cost.* Three a room, $25 a throw, out of the night's takings. A ringing coin pulls every Warden within earshot off his beat to investigate and stare — bought time, at a price, in exactly the direction you choose.
 - *Strikes and rollback.* A catch costs a strike and a fine, and the room's takings roll back to what you had when you entered it — a room can never be farmed by failing it.
 
 **Levels.**
@@ -60,7 +60,7 @@ Entered on [make.fun](https://make.fun/?ref=dr95t7s8&utm_source=github&utm_mediu
 
 **Controls.** As the table above: WASD/arrows to move, Shift to sneak, click or Q to throw a coin at the pointer, P/Esc to pause, R to restart a room, Enter/click to confirm.
 
-**Construction.** Plain ES modules under `game/src/`, one job each: `config.js` (every tuning number), `levels.js` (the three rooms as tile maps), `vision.js` (sight and cones), `world.js` (the whole simulation, DOM-free and testable in Node), `input.js`, `sound.js`, `render.js`, `shots.js` (the staged `?shot=` scenes the screenshots are taken from), and `main.js` (the boot and the screen flow). `main.ts` at the root copies `game/` and `screenshots/` to the output directory and writes `dossier.json` with the kit's vendored builder. Screenshots are staged by playing the real rules forward — see `shots.json`.
+**Construction.** Plain ES modules under `game/src/`, one job each: `tuning.js` (every number that shapes play), `rng.js` (a seeded random source for staging), `rooms.js` (the three rooms as tile maps plus watcher data), `sight.js` (raycast cones and line of sight), `sim.js` (the whole simulation, DOM-free and testable in Node), `keys.js` (keyboard and mouse), `beeps.js` (WebAudio sounds), `paint.js` (canvas rendering and the HUD), `staging.js` (the staged `?shot=` scenes the screenshots are taken from), and `boot.js` (the loop and the screen flow). `main.ts` at the root copies `game/` and `screenshots/` to the output directory, writes `dossier.json` with the kit's vendored builder, and then rebuilds the dossier once more to prove the hand-in is byte-stable. Screenshots are staged by playing the real rules forward — see `shots.json`.
 
 ## Running the build
 
@@ -68,4 +68,4 @@ Entered on [make.fun](https://make.fun/?ref=dr95t7s8&utm_source=github&utm_mediu
 mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 ```
 
-This produces `out/game/`, `out/screenshots/`, and `out/dossier.json`.
+This produces `out/game/`, `out/screenshots/`, and `out/dossier.json`. Note that `main.ts` stops at the dossier gate while `screenshots/` holds fewer than 3 images — the renders are part of the hand-in, not an afterthought.
